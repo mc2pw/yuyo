@@ -132,14 +132,14 @@ class Yuyo extends Array {
     let w;
 
     if (v instanceof Function)
-      w = onFunction(on, f, v);
+      w = onFunction(Yuyo.on, f, v);
     else if (v instanceof Yuyo)
       w = v.copy().$(f);
       //w = v.copy().$(f).act();
     else if (v instanceof Vector)
-      w = onVector(on, f, v);
+      w = onVector(Yuyo.on, f, v);
     else if (v instanceof Promise)
-      w = onPromise(on, f, v);
+      w = onPromise(Yuyo.on, f, v);
     else if (v === undefined)
       w = f(v);
     else if (v === null)
@@ -149,9 +149,9 @@ class Yuyo extends Array {
       // Expand tensor only when passed as an argument of a function
       // that is not known to be a tensor product of functions.
     else if (v[Symbol.iterator] instanceof Function)
-      w = onIterable(on, f, v);
+      w = onIterable(Yuyo.on, f, v);
     else if (v[Symbol.asyncIterator] instanceof Function)
-      w = onAsyncIterable(on, f, v);
+      w = onAsyncIterable(Yuyo.on, f, v);
     else
       w = f(v);
 
@@ -195,8 +195,10 @@ class Yuyo extends Array {
      // avoid lazy evaluations as much as possible.
     let r = x;
 
-    for (const f of this)
+    for (let i = 0; i < this.length; i++) {
+      const f = this[i];
       r = f instanceof Array ? Yuyo.over(f, r) : Yuyo.on(f, r);
+    }
 
     return r;
   }
@@ -226,16 +228,16 @@ class Yuyo extends Array {
 
   merge(col) {
     const sources = memo(this.copy()
-    .$(v => ({it: col(v)})); // If the position is needed col can include it.
+    .$(v => ({it: col(v)})) // If the position is needed col can include it.
     .$(({it}) => ({
       advance(done) {
         this.promise = done ? null : $(result => ({result, source: this})).act(it.next());
       }
     }))
-    .$(source => source.advance(false)))
+    .$(source => source.advance(false)));
 
     async function next() {
-      const promises = nullify(flat($(states).$(({promise}) => promise)));
+      const promises = nullify(flat($(sources).$(({promise}) => promise)));
 
       return $(({promises}) => promises === null
         ? {done : true}
