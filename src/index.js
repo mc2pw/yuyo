@@ -21,33 +21,33 @@ class Vector {
   }
 }
 
-function loadAsyncIterable(load, v) {
+function loadAsyncIterable(call, v) {
   return x => ({
     async *[Symbol.asyncIterator]() {
       for await (const t of v)
-        yield load(t)(x);
+        yield call(t, x);
     }
   });
 }
 
-function loadIterable(load, v) {
+function loadIterable(call, v) {
   return x => ({
     *[Symbol.iterator]() {
       for (const t of v)
-        yield load(t)(x);
+        yield call(t, x);
     }
   });
 }
 
-function loadPromise(load, v) {
+function loadPromise(call, v) {
   return async function (x) {
-    return load(await v)(x);
+    return call(await v, x);
   };
 }
 
-function loadVector(load, v) {
+function loadVector(call, v) {
   // TODO: What's the order of the tensoring?
-  return x => new Vector(v.terms, t => load(v.out(t))(x));
+  return x => new Vector(v.terms, t => call(v.out(t), x));
 }
 
 function onAsyncIterable(on, f, v) {
@@ -68,8 +68,8 @@ function onIterable(on, f, v) {
   };
 }
 
-function onPromise(on, f, v) {
-  return v.then(t => on(f, t));
+async function onPromise(on, f, v) {
+  return on(f, await v);
 }
 
 function onVector(on, f, v) {
@@ -86,98 +86,111 @@ function overValue(on, f, v) {
   return m(f);
 }
 
+function callArray(f, v) {
+  const m = h => h.map(t => t instanceof Array ? m(t) : t(v));
+  return m(f);
+}
+
 const loadedSym = Symbol("loaded");
 
-class Yuyo extends Array {
-  static load(v) {
-    // f (g1, g2) = h; x f g1 = h(x)(1)
-    // X*xX X*xI*xX -> X*xI*xX
-    // (x1, x2) g = h; x1 g = h(1)
-    // I*xX X*xX -> I*X
-    let w;
+export function unary(func) {
+  func[loadedSym] = true;
+  return func;
+}
 
-    if (v instanceof Function) {
-      if (v[loadedSym]) return v;
+function yuyoLoad(v) {
+  // f (g1, g2) = h; x f g1 = h(x)(1)
+  // X*xX X*xI*xX -> X*xI*xX
+  // (x1, x2) g = h; x1 g = h(1)
+  // I*xX X*xX -> I*X
+  let w;
 
-      w = x => x instanceof Array ? v(...x) : v(x);
-    } else if (v instanceof Yuyo)
-      w = x => v.act(x);
-    else if (v instanceof Vector)
-      w = loadVector(Yuyo.load, v);
-    else if (v instanceof Array) {
-      if (v[loadedSym]) return v;
+  //else if (v === $) // identity
+  if (v instanceof Function) {
+    if (v[loadedSym]) return v;
 
-      w = v.map(Yuyo.load);
-    } else if (v instanceof Promise)
-      w = loadPromise(Yuyo.load, v);
-    else if (v === undefined) // TODO: Keep this? Is this useful?
-      w = x => x;
-    else if (v === null)
-      w = () => v;
-    else if (v[Symbol.iterator] instanceof Function)
-      w = loadIterable(Yuyo.load, v);
-    else if (v[Symbol.asyncIterator] instanceof Function)
-      w = loadAsyncIterable(Yuyo.load, v);
-    else
-      w = () => v;
+    w = x => x instanceof Array ? v(...x) : v(x);
+  } else if (v instanceof Yuyo)
+    w = x => v.act(x);
+  else if (v instanceof Vector)
+    w = loadVector(yuyoCall, v);
+  else if (v instanceof Array) {
+    if (v[loadedSym]) return v;
 
-    w[loadedSym] = true;
-    return w;
-  }
+    w = v.map(yuyoLoad);
+  } else if (v instanceof Promise)
+    w = loadPromise(yuyoCall, v);
+  else if (v === undefined) // TODO: Keep this? Is this useful?
+    w = x => x;
+  else if (v === null)
+    w = () => v;
+  else if (v[Symbol.iterator] instanceof Function)
+    w = loadIterable(yuyoCall, v);
+  else if (v[Symbol.asyncIterator] instanceof Function)
+    w = loadAsyncIterable(yuyoCall, v);
+  else
+    w = () => v;
 
-  static on(f, v) {
-    // f is a loaded function.
-    // TODO: Is there a problem with this not being recursive?
-    // TODO: How does one do raw mapping of the terms, besides reccursively iterating?
-    let w;
+  w[loadedSym] = true;
+  return w;
+}
 
-    if (v instanceof Function)
-      w = onFunction(Yuyo.on, f, v);
-    else if (v instanceof Yuyo)
-      w = v.copy().$(f);
-      //w = v.copy().$(f).act();
-    else if (v instanceof Vector)
-      w = onVector(Yuyo.on, f, v);
-    else if (v instanceof Promise)
-      w = onPromise(Yuyo.on, f, v);
-    else if (v === undefined)
-      w = f(v);
-    else if (v === null)
-      w = null;
-    else if (v instanceof Array)
-      w = tab(v).$(f).act();
-      // Expand tensor only when passed as an argument of a function
-      // that is not known to be a tensor product of functions.
-    else if (v[Symbol.iterator] instanceof Function)
-      w = onIterable(Yuyo.on, f, v);
-    else if (v[Symbol.asyncIterator] instanceof Function)
-      w = onAsyncIterable(Yuyo.on, f, v);
-    else
-      w = f(v);
+function yuyoOn(f, v) {
+  // f is a loaded function.
+  // TODO: Is there a problem with this not being recursive?
+  // TODO: How does one do raw mapping of the terms, besides reccursively iterating?
+  let w;
 
-    return w;
-  }
+  if (v instanceof Function)
+    w = onFunction(yuyoOn, f, v);
+  else if (v instanceof Yuyo)
+    w = v.copy().$(f);
+    //w = v.copy().$(f).act();
+  else if (v instanceof Vector)
+    w = onVector(yuyoOn, f, v);
+  else if (v instanceof Promise)
+    w = onPromise(yuyoOn, f, v);
+  else if (v === undefined)
+    w = f(v);
+  else if (v instanceof Array) {
+    w = f[loadedSym] ? f(v) : tab(v).$(f).act([]);
+    // Expand tensor only when passed as an argument of a function
+    // that is not known to be a tensor product of functions.
+    // Passing to a unary function does not expand the tensor.
+  } else if (v[Symbol.iterator] instanceof Function)
+    w = onIterable(yuyoOn, f, v);
+  else if (v[Symbol.asyncIterator] instanceof Function)
+    w = onAsyncIterable(yuyoOn, f, v);
+  else
+    w = f(v);
 
-  static over(f, v) {
-    let w;
+  return w;
+}
 
-    if (v instanceof Yuyo || v instanceof Vector)
-      w = overValue(f, v);
-    else if (v instanceof Array)
-      // Empty values of f are treated as zero not as the identity.
-      w = f.map((t, i) => t instanceof Array ? Yuyo.over(t, v[i]) : Yuyo.on(t, v[i]));
-    else if (v === null)
-      w = null;
-    else
-      w = overValue(f, v);
+function yuyoOver(f, v) {
+  let w;
 
-    return w;
-  }
+  if (v instanceof Yuyo || v instanceof Vector)
+    w = overValue(yuyoOn, f, v);
+  else if (v instanceof Array)
+    // Empty values of f are treated as zero not as the identity.
+    w = f.map((t, i) => t instanceof Array ? yuyoOver(t, v[i]) : yuyoOn(t, v[i]));
+  else
+    w = overValue(yuyoOn, f, v);
 
+  return w;
+}
+
+function yuyoCall(f, v) {
+  f = yuyoLoad(f);
+  return f instanceof Array ? callArray(f, v) : f(v);
+}
+
+export class Yuyo extends Array {
   $(...terms) {
     this.push(terms.length === 1
-      ? Yuyo.load(terms[0])
-      : x => new Vector(terms, t => Yuyo.load(t)(x))
+      ? yuyoLoad(terms[0])
+      : x => new Vector(terms, t => yuyoCall(t, x))
     );
 
     // Cover with composition of sums.
@@ -192,13 +205,16 @@ class Yuyo extends Array {
   }
 
   act(x) {
-     // avoid lazy evaluations as much as possible.
+    // avoid lazy evaluations as much as possible.
     let r = x;
 
-    for (let i = 0; i < this.length; i++) {
-      const f = this[i];
-      r = f instanceof Array ? Yuyo.over(f, r) : Yuyo.on(f, r);
-    }
+    for (let i = 0; i < this.length; i++)
+      if (r === null) {
+        return null;
+      } else if (i in this) {
+        const f = this[i];
+        r = f instanceof Array ? yuyoOver(f, r) : yuyoOn(f, r);
+      }
 
     return r;
   }
@@ -236,7 +252,7 @@ class Yuyo extends Array {
     }))
     .$(source => source.advance(false)));
 
-    async function next() {
+    function next() {
       const promises = nullify(flat($(sources).$(({promise}) => promise)));
 
       return $(({promises}) => promises === null
@@ -260,7 +276,13 @@ class Yuyo extends Array {
 
   // Useful for applying functors, allows changing each factor through map.
   array() {
-    // return the list of composed functions.
+    const r = [];
+
+    for (let i = 0; i < this.length; i++)
+      if (i in this)
+        r[i] = this[i];
+
+    return r;
   }
 }
 
@@ -287,8 +309,8 @@ class Yuyo extends Array {
 // digest(null) should always be null, since there is exactly one nullary operation
 // unless there is some intermediate 1-ary operation.
 // action(-, -) should be action(-, digest(-)).
-function flow(tree, init, action) {
-  if (tree != null && tree[Symbol.iterator] instanceof Function) {
+export function flow(tree, init, action) {
+  if (tree != null && isYuyoIterable(tree)) {
     let r = null;
     let a = v => {
       a = v => action(r, v);
@@ -302,13 +324,18 @@ function flow(tree, init, action) {
   } else return tree;
 }
 
-function memo(tree) {
+export function memo(tree) {
   return $(...flow(tree, v => [v], (s, v) => push(s, $(...v))));
 }
 
-/*function yuyo(arr) {
+export function yuyo(arr) {
+  const r = new Yuyo();
 
-}*/
+  for (const t of arr)
+    r.$(t);
+
+  return r;
+}
 
 // TODO: convert yuyo to array and back?
 // TODO: Async versions of certain accumulators?
@@ -332,40 +359,96 @@ function nullify(it) {
   }
 }
 
-function* flat(tree) {
+function isYuyoIterable(it) {
+  return (
+    it[Symbol.iterator] instanceof Function
+    && !(
+      it instanceof Array
+      && !(
+        it instanceof Vector
+        || it instanceof Yuyo
+      )
+    )
+  );
+}
+
+export function* flat(tree) {
   if (tree === null);
-  else if (tree !== undefined && tree[Symbol.iterator] instanceof Function) {
+  else if (tree !== undefined && isYuyoIterable(tree)) {
     for (const t of tree)
-      yield* flat(i);
+      yield* flat(t);
   } else yield tree;
 }
 
-async function* asyncFlat(tree) {
+export async function* asyncFlat(tree) {
   if (tree === null);
   else if (tree !== undefined && (
     tree[Symbol.asyncIterator] instanceof Function
-    || tree[Symbol.iterator] instanceof Function
+    || isYuyoIterable(tree)
   )) {
     for await (const t of tree)
       yield* flat(i);
   } else yield t;
 }
 
-function fill(action) {
+export function fill(action) {
   let r;
   let a = v => {
-    a = v => r = Yuyo.on(s => action(s, v), r);
+    a = v => r = yuyoOn(s => action(s, v), r);
     return r = v;
   };
 
-  return a;
+  return v => a(v);
 }
 
-function zip(arr) {
-  const p = new Yuyo();
+export function ufill(action) {
+  let r;
+  let a = v => {
+    a = v => r = yuyoOn(unary(s => action(s, v)), r);
 
-  for (let i = 0; i < arr.length;) {
-  }
+    return r = v;
+  };
+
+  return unary(v => a(v));
+}
+
+function _zip(arr) {
+  return yuyo(arr.map(it => unary(x => $(
+    ({value, done}) => done ? null : push(x, value)
+  ).act(it.next()))));
+}
+
+export function zip(arr) {
+  const funcs = _zip(arr);
+
+  function next() {
+    const value = funcs.act([]);
+
+    // This can't be a yuyo because of the null value.
+    return value => value === null ? {done: true} : {value, done: false};
+  };
+
+  return {
+    [Symbol.iterator]() {
+      return { next };
+    }
+  };
+}
+
+export function asyncZip(arr) {
+  const funcs = _zip(arr);
+
+  async function next() {
+    const value = await funcs.act([]);
+
+    return value === null ? {done: true} : {value, done: false};
+  };
+
+  return {
+    [Symbol.asyncIterator]() {
+      return { next };
+    }
+  };
 }
 
 // TODO: What about zip?
@@ -388,7 +471,7 @@ function zip(arr) {
 // Zip acts recursively? No need to zip recursively, since zip takes
 // an array of iterables, and the not yet zipped produced arrays can be zipped
 // when needed.
-function tab(arr) {
+export function tab(arr) {
   const p = new Yuyo();
   // TODO: convert arr to yuyo?
   for (let i = 0; i < arr.length; i++) {
@@ -397,20 +480,20 @@ function tab(arr) {
 
       // No need to expand recursively.
       if (u instanceof Yuyo)
-        p.$(u.copy().$(v => t => [...t, v]).act());
+        p.$(u.copy().$(v => unary(t => [...t, v])).act());
       else if (u === null)
-        //return $();
-        return $(null); // TODO: How does this affect execution?
+        return $();
+        //return $(null); // TODO: How does this affect execution?
       else
-        p.$(t => {
+        p.$(unary(t => {
           t.push(u);
           return t;
-        });
+        }));
     } else {
-      p.$(t => {
+      p.$(unary(t => {
         t.length++;
         return t;
-      });
+      }));
     }
   }
 
@@ -420,16 +503,12 @@ function tab(arr) {
 
 // Util
 
-function push(arr, item) {
+export function push(arr, item) {
   arr.push(item);
   return arr;
 }
 
-function* forever() {
-  while (1) yield;
-}
-
-function last(it) {
+export function last(it) {
   let r;
   for (r of it);
   return r;
