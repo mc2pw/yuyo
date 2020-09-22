@@ -1,7 +1,4 @@
-import {
-  call,
-  el
-} from "./core";
+import { unary } from "./func";
 
 // TODO: Instead of array yuyo conversion do iterable yuyo conversion?
 /*export const yuyo = yy => unary(arr => {
@@ -14,7 +11,7 @@ import {
 });*/
 
 // Handle constant
-const iterNext = iter => {
+/*const iterNext = iter => {
 };
 
 const maybePush = ({value, done}) => done ? null : push(value);
@@ -63,7 +60,7 @@ export const asyncZip = unary(arr => {
       return { next };
     }
   };
-});
+});*/
 
 // TODO: What about zip?
 // With zip one takes a yuyo with some factors being arrays (not vectors,
@@ -86,7 +83,7 @@ export const asyncZip = unary(arr => {
 // an array of iterables, and the not yet zipped produced arrays can be zipped
 // when needed.
 
-export const tab = {(arr => {
+/*export const tab = {(arr => {
   // Return iterable (generator) instead then apply yuyo. Take iterable?
   const p = new Yuyo();
   // TODO: convert arr to yuyo?
@@ -110,16 +107,25 @@ export const tab = {(arr => {
 
   // If arr has no paths, then p.act should be an Array.
   return p;
-});
+});*/
 
-export const push = item => arr => {
-  arr.push(item);
-  return arr;
-};
+/*export const push = item => {
+  return unary(arr => {
+    if (arr instanceof Array) {
+      if (length === undefined) {
+        length = arr.length;
+        arr.push(item);
+        return arr;
+      } else
+        return [...arr.slice(0, length), item];
+    } else
+      return [arr];
+  })
+};*/
 
-export const copy = arr => [...arr];
+/*export const copy = arr => [...arr];
 
 export const incrLength = arr => {
   arr.length++;
   return arr;
-};
+};*/

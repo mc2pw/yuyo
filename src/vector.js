@@ -1,8 +1,6 @@
-import * as sym from "symbol";
+import * as sym from "./symbol";
 
 export class Vector {
-  [sym.tree] = true;
-
   constructor(terms, out) {
     this.terms = terms;
     this.out = out;

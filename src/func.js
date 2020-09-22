@@ -1,4 +1,3 @@
-import * as core from "./core";
 import * as sym from "./symbol";
 
 export function unary(f) {
@@ -6,23 +5,22 @@ export function unary(f) {
   return f;
 }
 
-export function abstract(f) {
+export const abstract = f => function (...v) {
   const theory = {};
 
   return {
     [sym.prepare](action) {
       theory.action = action;
-      return f.bind(theory);
+      return f.call(theory, ...v);
     }
   };
-}
+};
 
 // When using fill the yuyo has to be recreated before each iteration
 // to reset the state. In a sense, this makes fill(action) of affine type.
 // A composition that has an affine type is also affine?
 // TODO: mark fill(action) as affine? Pass the affine property to the yuyo?
-// TODO: What about continuation style as an alternative to fill? feedback(f)
-export const fill = abstract(action => {
+export const fill = abstract(function (action) {
   let r;
   let a = v => { // null is handled by theory. This can be used for XNNO.
     a = v => r = this.action(action(v), r);
@@ -49,12 +47,13 @@ export const forever = {
 };
 
 // Identity with secondary effects
+// TODO: Send messages, errors, etc.
 
 export const print = unary(x => {
   console.log(x);
   return x;
 });
 
-export const sleep = duration => unary(async function (x) {
+export const sleep = duration => unary(function (x) {
   return new Promise(resolve => setTimeout(resolve, duration, x));
 });

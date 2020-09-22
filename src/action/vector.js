@@ -6,7 +6,14 @@ const vector = {
     return this.apply(this.prepare(f), v);
   },
   prepare(f) {
-    return core.prepare(this.action.bind(this), f);
+    let w;
+
+    if (f[sym.act] instanceof Function)
+      w = f;
+    else
+      w = core.prepare(this.action.bind(this), f);
+
+    return w;
   },
   apply(f, v) {
     // Valid values of f are the ones that don't require some sort of lazy evaluation,
