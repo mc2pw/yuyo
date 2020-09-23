@@ -30,6 +30,11 @@ export const fill = abstract(function (action) {
   return v => a(v);
 });
 
+// TODO: Catch errors by providing a way to use the second term only if the
+// first is null? This would work as an if else.
+
+export const choose = count => {};
+
 // continuation
 // (f => f((g => g(g))(g => n => f(g(g))(n))))
 export function feedback(f) {
@@ -57,3 +62,10 @@ export const print = unary(x => {
 export const sleep = duration => unary(function (x) {
   return new Promise(resolve => setTimeout(resolve, duration, x));
 });
+
+export const push = dst => unary(x => {
+  dst.push(x);
+  return x;
+});
+
+

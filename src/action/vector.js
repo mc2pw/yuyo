@@ -8,10 +8,14 @@ const vector = {
   prepare(f) {
     let w;
 
-    if (f[sym.act] instanceof Function)
+    if (f == null)
+      w = f;
+    else if (f[sym.prepare] instanceof Function)
+      w = f[sym.prepare](action);
+    else if (f[sym.act] instanceof Function)
       w = f;
     else
-      w = core.prepare(this.action.bind(this), f);
+      w = core.prepareCollection(this.action.bind(this), f);
 
     return w;
   },

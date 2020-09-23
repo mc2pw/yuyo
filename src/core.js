@@ -1,4 +1,3 @@
-import * as sym from "./symbol";
 import { Vector } from "./vector";
 
 function prepareAsyncIterable(action, v) {
@@ -60,7 +59,8 @@ function applyToFunction(action, f, v) {
   return mapped(v);
 }
 
-export function prepare(action, v) {
+// TODO: Shorten so it can be used by formal.
+export function prepareCollection(action, v) {
   // Turn some values into unary functions.
   // Set symbols on arrays when preparing.
   // Using $ as the function turns the arrays into yuyos.
@@ -71,10 +71,6 @@ export function prepare(action, v) {
     w = prepareVector(action, v);
   else if (v instanceof Promise)
     w = preparePromise(action, v);
-  else if (v == null)
-    w = v;
-  else if (v[sym.prepare] instanceof Function)
-    w = v[sym.prepare](action);
   else if (v[Symbol.iterator] instanceof Function)
     w = prepareIterable(action, v);
   else if (v[Symbol.asyncIterator] instanceof Function)
@@ -89,6 +85,7 @@ export function prepare(action, v) {
 // Create several Yuyo like classes, the more complicated ones can for
 // example give especial meaning to arrays (product and pairing).
 
+// TODO: Shorten so it can be used by formal
 export function applyFunc(action, f, v) {
   // pass arg variadic.
   // TODO: Is there a problem with this not being recursive?
@@ -101,13 +98,6 @@ export function applyFunc(action, f, v) {
     w = applyToVector(action, f, v);
   else if (v instanceof Promise)
     w = applyToPromise(action, f, v);
-  else if (v === null)
-    w = null;
-  else if (v === undefined)
-    w = f(v);
-  else if (v[sym.pre] instanceof Function)
-    w = v[sym.pre](f);
-    //TODO: should this be v.pre().act()??
   else if (v[Symbol.iterator] instanceof Function)
     w = applyToIterable(action, f, v);
   else if (v[Symbol.asyncIterator] instanceof Function)
@@ -126,6 +116,20 @@ export function fold(action, start, steps) {
       return null;
 
     v = action(f, v);
+  }
+
+  return v;
+}
+
+// Treats empty entries as if they were undefined.
+export function foldArray(action, start, steps) {
+  let v = start;
+
+  for (let i = 0; i < steps.length; i++) {
+    if (v === null)
+      return null;
+
+    v = action(steps[i], v);
   }
 
   return v;

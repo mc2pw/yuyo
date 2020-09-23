@@ -1,9 +1,14 @@
 import * as sym from "./symbol";
 import * as core from "./core";
+import { Vector } from "./vector";
 import tensor from "./action/tensor";
+
+import formal from "./action/formal";
 
 export * from "./func";
 export * from "./iterable";
+
+export { formal };
 
 class YuyoBase extends Array {
   $(...terms) {

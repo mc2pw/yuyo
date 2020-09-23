@@ -57,12 +57,25 @@ const tensor = {
   applyUnary: vector.apply,
   prepareUnary: vector.prepare,
   applyFunc(f, v) {
-    return core.applyFunc(this._applyFunc.bind(this), f, v);
+    let w;
+
+    if (v instanceof Array && !(v[sym.act] instanceof Function))
+      w = f[sym.unary] ? f(v) : f(...v);
+    else if (v === null)
+      w = null;
+    else if (v === undefined)
+      w = f(v);
+    else if (v[sym.pre] instanceof Function)
+      w = v[sym.pre](f);
+      //TODO: should this be v.pre().act()??
+    else
+      w = core.applyFunc(this._applyFunc.bind(this), f, v);
+
+    return w;
   },
   applyFuncToTensor(f, v) {
-    const w = core.fold(formal.action.bind(formal), [], v);
-    const g = f[sym.unary] ? f : x => f(...x);
-    return this.applyFunc(g, w);
+    const w = core.foldArray(formal.action.bind(formal), [], v);
+    return this.applyFunc(f, w);
   },
   _applyFunc(f, v) {
     let w;
