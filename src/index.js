@@ -3,12 +3,13 @@ import * as core from "./core";
 import { Vector } from "./vector";
 import tensor from "./action/tensor";
 
-import formal from "./action/formal";
+//import formal from "./action/formal";
 
 export * from "./func";
 export * from "./iterable";
+export * from "./array";
 
-export { formal };
+//export { formal };
 
 class YuyoBase extends Array {
   $(...terms) {
@@ -130,7 +131,7 @@ function* flat(tree) {
 async function* asyncFlat(tree) {
   for await (const t of tree) {
     if (isAsyncBranch(t)) {
-      for await (const v of asyncflat(t))
+      for await (const v of asyncFlat(t))
         yield v;
     } else if (t instanceof Yuyo) {
       for await (const v of t.asyncFlat())

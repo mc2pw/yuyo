@@ -1,4 +1,4 @@
-import {$, fungion} from '../src/index';
+import { $, fungion } from '../src/index';
 import * as fg from '../src/index';
 
 test('creates simple vector', () => {

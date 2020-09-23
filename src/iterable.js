@@ -79,6 +79,12 @@ export function last(it) {
   return r;
 }
 
+export async function asyncLast(it) {
+  let r;
+  for await (r of it);
+  return r;
+}
+
 // Use together with fill and filter.
 export function* until(it) {
   let r;
@@ -90,8 +96,24 @@ export function* until(it) {
   }
 }
 
+export async function* asyncUntil(it) {
+  let r;
+  for await (r of it) {
+    if (r === null)
+      break;
+
+    yield r;
+  }
+}
+
 export function* filter(it) {
   for (const v of it)
+    if (v !== null)
+      yield v;
+}
+
+export async function* asyncFilter(it) {
+  for await (const v of it)
     if (v !== null)
       yield v;
 }

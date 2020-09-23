@@ -23,17 +23,20 @@ export const abstract = f => function (...v) {
 export const fill = abstract(function (action) {
   let r;
   let a = v => { // null is handled by theory. This can be used for XNNO.
-    a = v => r = this.action(action(v), r);
+    a = v => r = this.action(this.action(action, v), r);
     return r = v;
   };
 
-  return v => a(v);
+  return unary(v => a(v));
 });
 
 // TODO: Catch errors by providing a way to use the second term only if the
 // first is null? This would work as an if else.
+export function pick(count) {
+  let k = 0;
 
-export const choose = count => {};
+  return unary(v => k++ < count ? v : null);
+};
 
 // continuation
 // (f => f((g => g(g))(g => n => f(g(g))(n))))
@@ -67,5 +70,3 @@ export const push = dst => unary(x => {
   dst.push(x);
   return x;
 });
-
-

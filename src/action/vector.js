@@ -11,7 +11,7 @@ const vector = {
     if (f == null)
       w = f;
     else if (f[sym.prepare] instanceof Function)
-      w = f[sym.prepare](action);
+      w = f[sym.prepare](this.action.bind(this));
     else if (f[sym.act] instanceof Function)
       w = f;
     else

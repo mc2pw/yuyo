@@ -1,66 +1,20 @@
-import { unary } from "./func";
+import { unary, abstract } from "./func";
 
-// TODO: Instead of array yuyo conversion do iterable yuyo conversion?
-/*export const yuyo = yy => unary(arr => {
-  const r = new Yuyo();
+export const arrayToObject = keys => unary(function (arr) {
+  const r = {};
 
-  for (const t of arr)
-    r.$(t);
+  for (let i = 0; i < keys.length; i++)
+    r[keys[i]] = arr[i];
 
   return r;
-});*/
-
-// Handle constant
-/*const iterNext = iter => {
-};
-
-const maybePush = ({value, done}) => done ? null : push(value);
-
-function* zipFuncs(arr) {
-  for (const it of arr) {
-    yield call(maybePush, () => it.next());
-  }
-}
-
-function _zip(arr) {
-  return yuyo(arr.map(it => call(
-    ({value, done}) => done ? null : push(value),
-    it.next()
-  )));
-}
-
-export const zip = unary(arr => {
-  const funcs = _zip(arr);
-
-  function next() {
-    const value = funcs.act([]);
-
-    // This can't be a yuyo because of the null value.
-    return value => value === null ? {done: true} : {value, done: false};
-  };
-
-  return {
-    [Symbol.iterator]() {
-      return { next };
-    }
-  };
 });
 
-export const asyncZip = unary(arr => {
-  const funcs = _zip(arr);
+export const tab = abstract(function (obj) {
+  return this.action(arrayToObject(Object.keys(obj)), Object.values(obj));
+});
 
-  async function next() {
-    const value = await funcs.act([]);
-
-    return value === null ? {done: true} : {value, done: false};
-  };
-
-  return {
-    [Symbol.asyncIterator]() {
-      return { next };
-    }
-  };
-});*/
+// TODO: Define zip using iterable.turn and allow it being applied to objects
+// and arrays.
 
 // TODO: What about zip?
 // With zip one takes a yuyo with some factors being arrays (not vectors,
@@ -82,50 +36,3 @@ export const asyncZip = unary(arr => {
 // Zip acts recursively? No need to zip recursively, since zip takes
 // an array of iterables, and the not yet zipped produced arrays can be zipped
 // when needed.
-
-/*export const tab = {(arr => {
-  // Return iterable (generator) instead then apply yuyo. Take iterable?
-  const p = new Yuyo();
-  // TODO: convert arr to yuyo?
-  for (let i = 0; i < arr.length; i++) {
-    if (i in arr) {
-      let u = arr[i];
-
-      // No need to expand recursively.
-      if (u instanceof Yuyo) {
-        p.$() // use call
-        p.$(u.copy().$(push)[sym.act](copy));
-      } else if (u === null)
-        return $();
-        //return $(null); // TODO: How does this affect execution?
-      else
-        p.$(push(u));
-    } else {
-      p.$(incrLength);
-    }
-  }
-
-  // If arr has no paths, then p.act should be an Array.
-  return p;
-});*/
-
-/*export const push = item => {
-  return unary(arr => {
-    if (arr instanceof Array) {
-      if (length === undefined) {
-        length = arr.length;
-        arr.push(item);
-        return arr;
-      } else
-        return [...arr.slice(0, length), item];
-    } else
-      return [arr];
-  })
-};*/
-
-/*export const copy = arr => [...arr];
-
-export const incrLength = arr => {
-  arr.length++;
-  return arr;
-};*/
