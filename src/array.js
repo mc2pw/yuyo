@@ -1,16 +1,27 @@
-import { unary, abstract } from "./func";
+import {unary, abstract} from './func';
 
-export const arrayToObject = keys => unary(function (arr) {
-  const r = {};
+/**
+ * @param {Array} keys
+ * @return {Function}
+ */
+export function arrayToObject(keys) {
+  return unary((arr) => {
+    const r = {};
 
-  for (let i = 0; i < keys.length; i++)
-    r[keys[i]] = arr[i];
+    for (let i = 0; i < keys.length; i++) {
+      r[keys[i]] = arr[i];
+    }
 
-  return r;
-});
+    return r;
+  });
+}
 
-export const tab = abstract(function (obj) {
-  return this.action(arrayToObject(Object.keys(obj)), Object.values(obj));
+/**
+ * @function tab
+ * @return {Function}
+ */
+export const tab = abstract(function(action) {
+  return (v) => action(arrayToObject(Object.keys(v)), Object.values(v));
 });
 
 // TODO: Define zip using iterable.turn and allow it being applied to objects

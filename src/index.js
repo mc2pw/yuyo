@@ -1,23 +1,29 @@
-import * as sym from "./symbol";
-import * as core from "./core";
-import { Vector } from "./vector";
-import tensor from "./action/tensor";
+import * as sym from './symbol';
+import * as core from './core';
+import {unary} from './func';
+import {Vector} from './vector';
+import tensor from './action/tensor';
 
-//import formal from "./action/formal";
+export * from './func';
+export * from './iterable';
+export * from './array';
+export {sym as symbol};
 
-export * from "./func";
-export * from "./iterable";
-export * from "./array";
-
-//export { formal };
-
+/** Base class that does not assume a theory. */
 class YuyoBase extends Array {
+  /**
+   * Adds a new step to the Yuyo.
+   *
+   * @param {...*} terms
+   * @return {Yuyo}
+   */
   $(...terms) {
     const theory = this.constructor.theory;
 
-    this.push(terms.length === 1
-      ? theory.prepare(terms[0])
-      : x => new Vector(terms, t => theory.action(t, x))
+    this.push(
+      terms.length === 1 ?
+      theory.prepare(terms[0]) :
+      unary((x) => new Vector(terms, (t) => theory.action(t, x))),
     );
 
     // Cover with composition of sums.
@@ -25,92 +31,103 @@ class YuyoBase extends Array {
     return this;
   }
 
+  /**
+   * Creates a copy of the Yuyo.
+   *
+   * @return {Yuyo}
+   */
   copy() {
     const p = new Yuyo();
 
-    for (const f of this)
+    for (const f of this) {
       p.push(f);
+    }
 
     return p;
   }
 
-  // TODO: Document the fact that this is used for duck typing.
+  /**
+   * Creates a precomposed copy. Precomposable is a duck-type.
+   *
+   * @param {*} f
+   * @return {Yuyo}
+   */
   [sym.pre](f) {
-    return this.copy().$(f);
+    const theory = this.constructor.theory;
+    return theory.action(f, this[sym.act]());
   }
 
-  // TODO: Document the fact that this is used for duck typing.
+  /**
+   * Acts based on the theory of the Yuyo. Actor is a duck-type.
+   *
+   * @param {*} x
+   * @return {*}
+   */
   [sym.act](x) {
     // avoid lazy evaluations as much as possible.
     const theory = this.constructor.theory;
     return core.fold(theory.apply.bind(theory), x, this);
   }
 
+  /**
+   * Same as [Symbol('act')].
+   *
+   * @param {*} x
+   * @return {*}
+   */
   act(x) {
     return this[sym.act](x);
   }
-
-  // TODO: Decouple merge and mix from yuyo, just like zip is decoupled.
-  merge(col) {
-    const sources = memo(this.copy()
-    .$(v => ({it: col(v)})) // If the position is needed col can include it.
-    .$(({it}) => ({
-      advance(done) {
-        this.promise = done ? null : call(result => ({result, source: this}), it.next());
-      }
-    }))
-    .$(source => source.advance(false)));
-
-    function next() {
-      const promises = nullify(flat($(sources).$(({promise}) => promise)));
-
-      return $(({promises}) => promises === null
-        ? {done : true}
-        : $(t => {
-          t.source.advance(t.result.done);
-          return t.result;
-        }).$(result => ({
-          value: result,
-          done: false
-        })).act(Promise.race(promises))
-      ).act({promises});
-    }
-
-    return {
-      [Symbol.asyncIterator]() {
-        return { next };
-      }
-    };
-  }
 }
 
+/**
+ * @param {*} tree
+ * @return {boolean}
+ */
 function _isBranch(tree) {
   return tree[Symbol.iterator] instanceof Function && !(tree instanceof Array);
 }
 
+/**
+ * @param {*} tree
+ * @return {boolean}
+ */
 function isBranch(tree) {
   return tree != null && _isBranch(tree);
 }
 
+/**
+ * @param {*} tree
+ * @return {boolean}
+ */
 function isAsyncBranch(tree) {
   return tree != null && (
-    tree[Symbol.asyncIterator] instanceof Function
-    || _isBranch(tree)
+    tree[Symbol.asyncIterator] instanceof Function ||
+    _isBranch(tree)
   );
 }
 
+/**
+ * @param {*} it
+ * @return {Iterator}
+ */
 function getIterator(it) {
   return isBranch(it) ? it[Symbol.iterator]() : (function* () {
     yield it;
   })();
 }
 
+/**
+ * @param {*} it
+ * @return {AsyncIterator}
+ */
 function getAsyncIterator(it) {
   if (it != null) {
-    if (it[Symbol.asyncIterator] instanceof Function)
+    if (it[Symbol.asyncIterator] instanceof Function) {
       return it[Symbol.asyncIterator]();
-    else if (_isBranch(it))
+    } else if (_isBranch(it)) {
       return it[Symbol.iterator]();
+    }
   }
 
   return (async function* () {
@@ -118,28 +135,50 @@ function getAsyncIterator(it) {
   })();
 }
 
+/**
+ * @generator
+ * @function flat
+ * @param {Iterable} tree
+ * @yield {*}
+ */
 function* flat(tree) {
   for (const t of tree) {
-    if (isBranch(t))
+    if (isBranch(t)) {
       yield* flat(t);
-    else if (t instanceof Yuyo)
-      yield* t.flat();
-    else yield t;
-  }
-}
-
-async function* asyncFlat(tree) {
-  for await (const t of tree) {
-    if (isAsyncBranch(t)) {
-      for await (const v of asyncFlat(t))
-        yield v;
     } else if (t instanceof Yuyo) {
-      for await (const v of t.asyncFlat())
-        yield v;
+      yield* t.flat();
     } else yield t;
   }
 }
 
+/**
+ * @generator
+ * @function asyncFlat
+ * @param {Iterable} tree
+ * @yield {*}
+ */
+async function* asyncFlat(tree) {
+  for await (const t of tree) {
+    if (isAsyncBranch(t)) {
+      for await (const v of asyncFlat(t)) {
+        yield v;
+      }
+    } else if (t instanceof Yuyo) {
+      for await (const v of t.asyncFlat()) {
+        yield v;
+      }
+    } else yield t;
+  }
+}
+
+/**
+ * @generator
+ * @function asyncOnce0
+ * @param {AsyncIterable} its
+ * @param {Array} iters
+ * @param {Function} cb
+ * @yield {*}
+ */
 async function* asyncOnce0(its, iters, cb) {
   for await (const it of its) {
     if (!isAsyncBranch(it)) {
@@ -148,9 +187,9 @@ async function* asyncOnce0(its, iters, cb) {
       continue;
     }
 
-    const iter = it[Symbol.asyncIterator] instanceof Function
-      ? it[Symbol.asyncIterator]()
-      : it[Symbol.iterator]();
+    const iter = it[Symbol.asyncIterator] instanceof Function ?
+      it[Symbol.asyncIterator]() :
+      it[Symbol.iterator]();
     iters.push(iter);
 
     const {value, done} = await iter.next();
@@ -159,6 +198,13 @@ async function* asyncOnce0(its, iters, cb) {
   }
 }
 
+/**
+ * @generator
+ * @function asyncOnce
+ * @param {AsyncIterable} iters
+ * @param {Function} cb
+ * @yield {*}
+ */
 async function* asyncOnce(iters, cb) {
   for await (const iter of iters) {
     if (iter === null) {
@@ -172,10 +218,14 @@ async function* asyncOnce(iters, cb) {
   }
 }
 
+/**
+ * @param {Iterable} tree
+ * @return {Iterable}
+ */
 function mix(tree) {
   const iters = [];
 
-  function next() {
+  const next = () => {
     const v = [];
     let d = false;
 
@@ -187,52 +237,62 @@ function mix(tree) {
 
     return {
       value: $(...v),
-      done: d
+      done: d,
     };
-  }
+  };
 
-  for (const it of tree)
+  for (const it of tree) {
     iters.push(getIterator(it));
+  }
 
   return {
     [Symbol.iterator]() {
       return {next};
-    }
+    },
   };
 }
 
+/**
+ * @param {Iterable} tree
+ * @return {Iterable}
+ */
 function asyncMix(tree) {
-  let next, done;
+  let next;
+  let done;
   const iters = [];
 
-  function cb(d) {
+  const cb = (d) => {
     done = done && d;
-  }
+  };
 
-  function n0() {
+  const n0 = () => {
     next = n;
 
     return {
       value: $(asyncOnce0(tree, iters, cb)),
-      done
+      done,
     };
-  }
+  };
 
-  function n() {
+  const n = () => {
     return {
       value: $(asyncOnce(iters, cb)),
-      done
-    }
-  }
+      done,
+    };
+  };
 
   next = n0;
   return {
     [Symbol.iterator]() {
       return {next};
-    }
+    },
   };
 }
 
+/**
+ * @param {Iterable} tree
+ * @return {Iterable}
+ */
 function merge(tree) {
   const sources = [];
 
@@ -240,82 +300,116 @@ function merge(tree) {
     const iter = getAsyncIterator(it);
     sources.push({
       advance(done) {
-        this.promise = done ? null : (async function () {
+        this.promise = done ? null : (async function(source) {
           return {
             result: await iter.next(),
-            source: this
+            source,
           };
-        })();
-      }
+        })(this);
+      },
     });
   }
 
-  for (const s of sources)
+  for (const s of sources) {
     s.advance(false);
+  }
 
-  async function next() {
+  const next = async function() {
     const promises = [];
 
     for (const {promise} of sources) {
-      if (promise !== null)
+      if (promise !== null) {
         promises.push(promise);
+      }
     }
 
-    if (promises.length)
+    if (promises.length) {
       return {done: true};
+    }
 
     const {result, source} = await Promise.race(promises);
     source.advance(result.done);
 
     return {
       value: result,
-      done: false
+      done: false,
     };
-  }
+  };
 
   return {
     [Symbol.asyncIterator]() {
       return {next};
-    }
+    },
   };
 }
 
+/** A Yuyo is a composition. */
 export class Yuyo extends YuyoBase {
-  *climb(gen) {
+  /**
+  * @generator
+  * @function climb
+  * @param {Function} gen
+  * @yield {*}
+  */
+  * climb(gen) {
     const tree = this[sym.act]();
 
-    if (isBranch(tree))
+    if (isBranch(tree)) {
       yield* gen(tree);
-    else
+    } else {
       yield tree;
+    }
   }
 
-  async *asyncClimb(gen) {
+  /**
+  * @generator
+  * @function asyncClimb
+  * @param {Function} gen
+  * @yield {*}
+  */
+  async* asyncClimb(gen) {
     const tree = this[sym.act]();
 
     if (isAsyncBranch(tree)) {
-      for await (const v of gen(tree))
+      for await (const v of gen(tree)) {
         yield v;
-    } else
+      }
+    } else {
       yield tree;
+    }
   }
 
+  /**
+  * @return {Iterator}
+  */
   flat() {
     return this.climb(flat);
   }
 
+  /**
+  * @return {AsyncIterator}
+  */
   asyncFlat() {
     return this.asyncClimb(asyncFlat);
   }
 
+  /**
+  * @return {AsyncIterator}
+  */
   mix() {
     return this.climb(mix);
   }
 
+  /**
+  * @return {AsyncIterator}
+  */
   asyncMix() {
     return this.asyncClimb(asyncMix);
   }
 
+  /**
+  * @return {AsyncIterator}
+  */
   merge() {
     return this.asyncClimb(merge);
   }
@@ -323,6 +417,10 @@ export class Yuyo extends YuyoBase {
 
 Yuyo.theory = tensor;
 
+/**
+ * @param {...*} terms
+ * @return {Yuyo}
+ */
 export function $(...terms) {
   const p = new Yuyo();
   p.$(...terms);

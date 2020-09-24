@@ -1,8 +1,8 @@
-import * as core from "../core";
-import * as sym from "../symbol";
-import { Tensor } from "../vector";
-import vector from "./vector";
-import formal from "./formal";
+import * as core from '../core';
+import * as sym from '../symbol';
+import {Tensor} from '../vector';
+import vector from './vector';
+import formal from './formal';
 
 const tensor = {
   ...vector,
@@ -10,12 +10,14 @@ const tensor = {
     let w;
 
     if (v instanceof Array && !(v[sym.act] instanceof Function)) {
-      if (f instanceof Tensor)
+      if (f instanceof Tensor) {
         w = this.applyTensor(f, v);
-      else
+      } else {
         w = this.applyToTensor(f, v);
-    } else
+      }
+    } else {
       w = this.applyPairing(f, v);
+    }
 
     return w;
   },
@@ -23,15 +25,17 @@ const tensor = {
     let w;
 
     if (v instanceof Array && !(v[sym.act] instanceof Function)) {
-      if (v instanceof Tensor)
+      if (v instanceof Tensor) {
         w = v;
-      else
+      } else {
         w = Tensor.create(v, this.prepare.bind(this));
+      }
     } else {
       w = this.prepareUnary(v);
 
-      if (w instanceof Function && !(v instanceof Function))
+      if (w instanceof Function && !(v instanceof Function)) {
         w[sym.unary] = true;
+      }
     }
 
     return w;
@@ -39,10 +43,11 @@ const tensor = {
   applyPairing(f, v) {
     let w;
 
-    if (f instanceof Tensor)
-      w = f.map(t => this.applyPairing(t, v));
-    else
+    if (f instanceof Tensor) {
+      w = f.map((t) => this.applyPairing(t, v));
+    } else {
       w = this.applyUnary(f, v);
+    }
 
     return w;
   },
@@ -51,7 +56,7 @@ const tensor = {
   },
   applyToTensor(f, v) {
     return vector.apply.call({
-      applyFunc: this.applyFuncToTensor.bind(this)
+      applyFunc: this.applyFuncToTensor.bind(this),
     }, f, v);
   },
   applyUnary: vector.apply,
@@ -59,17 +64,17 @@ const tensor = {
   applyFunc(f, v) {
     let w;
 
-    if (v instanceof Array && !(v[sym.act] instanceof Function))
+    if (v instanceof Array && !(v[sym.act] instanceof Function)) {
       w = f[sym.unary] ? f(v) : f(...v);
-    else if (v === null)
+    } else if (v === null) {
       w = null;
-    else if (v === undefined)
+    } else if (v === undefined) {
       w = f(v);
-    else if (v[sym.pre] instanceof Function)
+    } else if (v[sym.pre] instanceof Function) {
       w = v[sym.pre](f);
-      //TODO: should this be v.pre().act()??
-    else
+    } else {
       w = core.applyFunc(this._applyFunc.bind(this), f, v);
+    }
 
     return w;
   },
@@ -80,13 +85,14 @@ const tensor = {
   _applyFunc(f, v) {
     let w;
 
-    if (v instanceof Array && !(v[sym.act] instanceof Function))
+    if (v instanceof Array && !(v[sym.act] instanceof Function)) {
       w = this.applyFuncToTensor(f, v);
-    else
+    } else {
       w = this.applyFunc(f, v);
+    }
 
     return w;
-  }
+  },
 };
 
 // The action corresponds to a functor from the free cat or 2-colimit.

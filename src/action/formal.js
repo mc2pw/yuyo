@@ -1,6 +1,6 @@
-import * as core from "../core";
-import * as sym from "../symbol";
-import vector from "./vector";
+import * as core from '../core';
+import * as sym from '../symbol';
+import vector from './vector';
 
 // What about functions as entries?
 const _formal = {
@@ -9,36 +9,39 @@ const _formal = {
     let w;
 
     // Recognizing sym.prepare does not make sense here.
-    if (f == null)
+    if (f == null) {
       w = f;
-    else if (f[sym.act] instanceof Function)
+    } else if (f[sym.act] instanceof Function) {
       w = f[sym.act]();
-    else
+    } else {
       w = f;
+    }
 
     const u = core.prepareCollection(this.action.bind(this), w);
 
-    if (u instanceof Function && !(w instanceof Function))
+    if (u instanceof Function && !(w instanceof Function)) {
       return u;
-    else
-      return x => this.append(u, x);
+    } else {
+      return (x) => this.append(u, x);
+    }
   },
   apply(f, v) {
     let w;
 
     // The elemental values are null and arrays.
-    if (v instanceof Array)
+    if (v instanceof Array) {
       w = f(v);
-    else if (v === null)
+    } else if (v === null) {
       w = null;
-    else
+    } else {
       w = core.applyFunc(this.apply.bind(this), f, v);
+    }
 
     return w;
   },
   append(f, v) {
     return [...v, f];
-  }
+  },
 };
 
 // This can be implemented with the tensor action, but since tensor action
@@ -50,7 +53,7 @@ const formal = {
   append(f, v) {
     v.push(f);
     return v;
-  }
+  },
 };
 
 export default formal;

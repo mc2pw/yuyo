@@ -1,119 +1,186 @@
-import { Vector } from "./vector";
+import {Vector} from './vector';
 
+/**
+ * @param {Function} action
+ * @param {AsyncIterable} v
+ * @return {AsyncIterable}
+ */
 function prepareAsyncIterable(action, v) {
-  return x => ({
-    async *[Symbol.asyncIterator]() {
-      for await (const t of v)
+  return (x) => ({
+    async* [Symbol.asyncIterator]() {
+      for await (const t of v) {
         yield action(t, x);
-    }
+      }
+    },
   });
 }
 
+/**
+ * @param {Function} action
+ * @param {Iterable} v
+ * @return {Iterable}
+ */
 function prepareIterable(action, v) {
-  return x => ({
-    *[Symbol.iterator]() {
-      for (const t of v)
+  return (x) => ({
+    * [Symbol.iterator]() {
+      for (const t of v) {
         yield action(t, x);
-    }
+      }
+    },
   });
 }
 
+/**
+ * @param {Function} action
+ * @param {Promise} v
+ * @return {Promise}
+ */
 function preparePromise(action, v) {
-  return async function (x) {
+  return async function(x) {
     return action(await v, x);
   };
 }
 
+/**
+ * @param {Function} action
+ * @param {Vector} v
+ * @return {Vector}
+ */
 function prepareVector(action, v) {
-  return x => new Vector(v.terms, t => action(v.out(t), x));
+  return (x) => new Vector(v.terms, (t) => action(v.out(t), x));
 }
 
+/**
+ * @param {Function} action
+ * @param {Function} f
+ * @param {AsyncIterable} v
+ * @return {AsyncIterable}
+ */
 function applyToAsyncIterable(action, f, v) {
   return {
-    async *[Symbol.asyncIterator]() {
-      for await (const t of v)
+    async* [Symbol.asyncIterator]() {
+      for await (const t of v) {
         yield action(f, t);
-    }
+      }
+    },
   };
 }
 
+/**
+ * @param {Function} action
+ * @param {Function} f
+ * @param {Iterable} v
+ * @return {Iterable}
+ */
 function applyToIterable(action, f, v) {
   return {
-    *[Symbol.iterator]() {
-      for (const t of v)
+    * [Symbol.iterator]() {
+      for (const t of v) {
         yield action(f, t);
-    }
+      }
+    },
   };
 }
 
+/**
+ * @param {Function} action
+ * @param {Function} f
+ * @param {Promise} v
+ * @return {Promise}
+ */
 async function applyToPromise(action, f, v) {
   return action(f, await v);
 }
 
+/**
+ * @param {Function} action
+ * @param {Function} f
+ * @param {Vector} v
+ * @return {Vector}
+ */
 function applyToVector(action, f, v) {
-  return new Vector(v.terms, t => action(f, v.out(t)));
+  return new Vector(v.terms, (t) => action(f, v.out(t)));
 }
 
+/**
+ * @param {Function} action
+ * @param {Function} f
+ * @param {Function} v
+ * @return {Function}
+ */
 function applyToFunction(action, f, v) {
-  const mapped = t => t instanceof Function ? (...i) => mapped(t(...i)) : action(f, t);
+  const mapped = (t) => t instanceof Function ?
+    (...i) => mapped(t(...i)) :
+    action(f, t);
   return mapped(v);
 }
 
-// TODO: Shorten so it can be used by formal.
+/**
+ * @param {Function} action
+ * @param {*} v
+ * @return {*}
+ */
 export function prepareCollection(action, v) {
-  // Turn some values into unary functions.
-  // Set symbols on arrays when preparing.
   // Using $ as the function turns the arrays into yuyos.
-
   let w;
 
-  if (v instanceof Vector)
+  if (v instanceof Vector) {
     w = prepareVector(action, v);
-  else if (v instanceof Promise)
+  } else if (v instanceof Promise) {
     w = preparePromise(action, v);
-  else if (v[Symbol.iterator] instanceof Function)
+  } else if (v[Symbol.iterator] instanceof Function) {
     w = prepareIterable(action, v);
-  else if (v[Symbol.asyncIterator] instanceof Function)
+  } else if (v[Symbol.asyncIterator] instanceof Function) {
     w = prepareAsyncIterable(action, v);
-  else
+  } else {
     w = v;
+  }
 
   return w;
 }
 
-// Instead of marking "trees" in Yuyo, mark the arrays.
-// Create several Yuyo like classes, the more complicated ones can for
-// example give especial meaning to arrays (product and pairing).
-
-// TODO: Shorten so it can be used by formal
+/**
+ * @param {Function} action
+ * @param {Function} f
+ * @param {*} v
+ * @return {*}
+ */
 export function applyFunc(action, f, v) {
-  // pass arg variadic.
   // TODO: Is there a problem with this not being recursive?
-  // TODO: How does one do raw mapping of the terms, besides reccursively iterating?
+  // TODO: How does one do raw mapping of the terms, besides reccursively
+  // iterating?
   let w;
 
-  if (v instanceof Function)
+  if (v instanceof Function) {
     w = applyToFunction(action, f, v);
-  else if (v instanceof Vector)
+  } else if (v instanceof Vector) {
     w = applyToVector(action, f, v);
-  else if (v instanceof Promise)
+  } else if (v instanceof Promise) {
     w = applyToPromise(action, f, v);
-  else if (v[Symbol.iterator] instanceof Function)
+  } else if (v[Symbol.iterator] instanceof Function) {
     w = applyToIterable(action, f, v);
-  else if (v[Symbol.asyncIterator] instanceof Function)
+  } else if (v[Symbol.asyncIterator] instanceof Function) {
     w = applyToAsyncIterable(action, f, v);
-  else
+  } else {
     w = f(v);
+  }
 
   return w;
 }
 
+/**
+ * @param {Function} action
+ * @param {*} start
+ * @param {Iterable} steps
+ * @return {*}
+ */
 export function fold(action, start, steps) {
   let v = start;
 
   for (const f of steps) {
-    if (v === null)
+    if (v === null) {
       return null;
+    }
 
     v = action(f, v);
   }
@@ -121,13 +188,22 @@ export function fold(action, start, steps) {
   return v;
 }
 
-// Treats empty entries as if they were undefined.
+/**
+ * Same as fold but treats the empty entries of an Array as if thery were
+ * undefined.
+ *
+ * @param {Function} action
+ * @param {*} start
+ * @param {*} steps
+ * @return {*}
+ */
 export function foldArray(action, start, steps) {
   let v = start;
 
   for (let i = 0; i < steps.length; i++) {
-    if (v === null)
+    if (v === null) {
       return null;
+    }
 
     v = action(steps[i], v);
   }
