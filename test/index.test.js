@@ -1,19 +1,8 @@
+import {y2a} from './util';
 import {
   $,
-  last,
-  push,
   tab,
 } from '../src/index';
-
-/**
- * @param {Yuyo} yy
- * @return {Array}
- */
-function y2a(yy) {
-  const dst = [];
-  last(yy.$(push(dst)).flat());
-  return dst;
-};
 
 test('creates simple vector', () => {
   const t1 = $(1, $(2, $(3, 4, 5)));
@@ -68,10 +57,18 @@ test('creates function vectors', () => {
   const f2 = (x) => 3*x;
   const f3 = (x) => x*x;
   const f4 = (x, y) => $(x-y, x+y);
+  const f5 = (x, y) => [x, y];
+  const f6 = (x) => [x-1, x+1];
+  const f7 = (x, y) => x*y + 1;
 
   const t1 = $(1).$(f1).$(f2);
   const t2 = $(1).$($(f1).$(f3));
   const t3 = $([1, 2]).$($([f1, f2], f4).$(f4, undefined));
+  const t4 = $([$(1, 2), $(3, 4)]).$(f4);
+  const t5 = $([$(1, 2), $(3, 4)]).$(f5);
+  const t6 = $([$(1, 2), $(3, 4)]).$(f4, f5);
+  const t7 = $(1, $(2, 3), 4, $(5)).$([$(f6).$(f7), $(f3)]).$(f4);
+  const t8 = $([1, [2, 3]], [4, [5, 6]]).$([[f2, f3], f4]);
 
   const r1 = [3, 6];
   const r2 = [1, 4];
@@ -79,10 +76,24 @@ test('creates function vectors', () => {
     -5, 7, [1, 6], -4, 8, [2, 6],
     NaN, NaN, -1, NaN, NaN, 3,
   ];
+  const r4 = [-2, 4, -3, 5, -1, 5, -2, 6];
+  const r5 = [[1, 3], [1, 4], [2, 3], [2, 4]];
+  const r6 = [-2, 4, [1, 3], -3, 5, [1, 4], -1, 5, [2, 3], -2, 6, [2, 4]];
+  const r7 = [0, 2, 0, 8, 0, 18, 0, 32, 0, 50];
+  const r8 = [
+    [[3, 1], -1], [[3, 1], 5],
+    [[12, 16], -1], [[12, 16], 11],
+  ];
 
   expect(y2a(t1)).toEqual(r1);
   expect(y2a(t2)).toEqual(r2);
   expect(y2a(t3)).toEqual(r3);
-  // TODO: This fails!
-  // for(const k of $([$(1, 2), $(3, 4)]).walk(fg.list)) console.log(k);
+  expect(y2a(t4)).toEqual(r4);
+  expect(y2a(t5)).toEqual(r5);
+  expect(y2a(t6)).toEqual(r6);
+  expect(y2a(t7)).toEqual(r7);
+  expect(y2a(t8)).toEqual(r8);
 });
+
+// TODO: Test direct access through act and get.
+// TODO: Test null values.

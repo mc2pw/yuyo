@@ -2,9 +2,8 @@ import * as core from '../core';
 import * as sym from '../symbol';
 import vector from './vector';
 
-// What about functions as entries?
 const _formal = {
-  action: vector.action, // Empty values need to be handled in another layer.
+  action: vector.action,
   prepare(f) {
     let w;
 
@@ -15,6 +14,10 @@ const _formal = {
       w = f[sym.act]();
     } else {
       w = f;
+    }
+
+    if (w instanceof Array) {
+      return (x) => this.append(w, x);
     }
 
     const u = core.prepareCollection(this.action.bind(this), w);

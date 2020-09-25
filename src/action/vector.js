@@ -31,7 +31,7 @@ const vector = {
     let w;
 
     if (f === undefined) {
-      w = v; // TODO: Is this needed?
+      w = v;
     } else if (f === null) {
       w = f;
     } else if (f[sym.act] instanceof Function) {

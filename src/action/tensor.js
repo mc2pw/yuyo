@@ -44,7 +44,12 @@ const tensor = {
     let w;
 
     if (f instanceof Tensor) {
-      w = f.map((t) => this.applyPairing(t, v));
+      // Yuyo x gets handled by applyFuncToSimple.
+      const m = (x) => x instanceof Array ?
+        this.applyTensor(f, x) :
+        f.map((t) => this.apply(t, x));
+      m[sym.unary] = true;
+      w = this.applyFuncToSimple(m, v);
     } else {
       w = this.applyUnary(f, v);
     }
@@ -66,7 +71,16 @@ const tensor = {
 
     if (v instanceof Array && !(v[sym.act] instanceof Function)) {
       w = f[sym.unary] ? f(v) : f(...v);
-    } else if (v === null) {
+    } else {
+      w = this.applyFuncToSimple(f, v);
+    }
+
+    return w;
+  },
+  applyFuncToSimple(f, v) {
+    let w;
+
+    if (v === null) {
       w = null;
     } else if (v === undefined) {
       w = f(v);

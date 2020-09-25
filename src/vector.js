@@ -44,4 +44,12 @@ export class Tensor extends Array {
 
     return t;
   }
+
+  /**
+   * This makes map return an Array.
+   * @return {Type}
+   */
+  static get [Symbol.species]() {
+    return Array;
+  }
 }
