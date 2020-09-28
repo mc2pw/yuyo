@@ -1,7 +1,7 @@
 import * as sym from './symbol';
 import * as core from './core';
 import * as iter from './iterable';
-import {unary} from './func';
+import {unary, match} from './func';
 import {Vector} from './vector';
 import tensor from './action/tensor';
 
@@ -20,7 +20,7 @@ export class Yuyo extends Array {
     const theory = Yuyo.theory;
 
     this.push(
-      terms.length === 1 ?
+      terms.length === 1 && !(terms[0] instanceof Yuyo) ?
       theory.prepare(terms[0]) :
       unary((x) => new Vector(terms, (t) => theory.action(t, x))),
     );
@@ -141,24 +141,36 @@ export class Yuyo extends Array {
   }
 
   /**
-   * @return {AsyncIterator}
+   * @generator
+   * @function mix
+   * @yield {Yuyo}
    */
-  mix() {
-    return this.climb(iter.mix);
+  * mix() {
+    for (const arr of this.climb(iter.mix)) {
+      yield $(...arr);
+    }
   }
 
   /**
-   * @return {AsyncIterator}
+   * @generator
+   * @function asyncMix
+   * @yield {Yuyo}
    */
-  asyncMix() {
-    return this.asyncClimb(iter.asyncMix);
+  async* asyncMix() {
+    for await (const iter of this.asyncClimb(iter.asyncMix)) {
+      yield $(iter);
+    }
   }
 
   /**
-   * @return {AsyncIterator}
+   * @generator
+   * @function merge
+   * @yield {*}
    */
-  merge() {
-    return this.asyncClimb(iter.merge);
+  async* merge() {
+    for await (const v of this.asyncClimb(iter.merge)) {
+      yield unlessDone(v);
+    }
   }
 
   /**
@@ -204,6 +216,59 @@ export class Yuyo extends Array {
   }
 
   /**
+   * This is provided for consistency.
+   *
+   * @return {Function}
+   */
+  match() {
+    return unary((x) => this.match$().act(x));
+  }
+
+  /**
+   * This is provided for consistency.
+   *
+   * @return {Function}
+   */
+  asyncMatch() {
+    return unary((x) => this.asyncMatch$().act(x));
+  }
+
+  /**
+   * @return {Yuyo}
+   */
+  mix$() {
+    return $(this.mix());
+  }
+
+  /**
+   * @return {Yuyo}
+   */
+  asyncMix$() {
+    return $(this.asyncMix());
+  }
+
+  /**
+   * @return {Yuyo}
+   */
+  merge$() {
+    return $(this.merge());
+  }
+
+  /**
+   * @return {Yuyo}
+   */
+  last$() {
+    return $(this.last());
+  }
+
+  /**
+   * @return {Yuyo}
+   */
+  asyncLast$() {
+    return $(this.asyncLast());
+  }
+
+  /**
    * @return {Yuyo}
    */
   flat$() {
@@ -244,9 +309,25 @@ export class Yuyo extends Array {
   asyncFinish$() {
     return $(this.asyncFinish());
   }
+
+  /**
+   * @return {Yuyo}
+   */
+  match$() {
+    return $(match(this.flat())).$(unlessDone);
+  }
+
+  /**
+   * @return {Yuyo}
+   */
+  asyncMatch$() {
+    return $(match(this.asyncFlat())).$(unlessDone);
+  }
 }
 
 Yuyo.theory = tensor;
+
+const unlessDone = ({value, done}) => done ? null : value;
 
 /**
  * @param {...*} terms

@@ -14,6 +14,8 @@ export class Vector {
    * @return {*}
    */
   get(i) {
+    if (i >= this.terms.length) return null;
+
     return this.out(this.terms[i]);
   }
 
@@ -24,6 +26,16 @@ export class Vector {
   * [Symbol.iterator]() {
     for (let i = 0; i < this.terms.length; i++) {
       if (i in this.terms) yield this.out(this.terms[i]);
+    }
+  }
+
+  /**
+   * @generator
+   * @yield {*}
+   */
+  async* [Symbol.asyncIterator]() {
+    for (let i = 0; i < this.terms.length; i++) {
+      if (i in this.terms) yield await this.out(this.terms[i]);
     }
   }
 }

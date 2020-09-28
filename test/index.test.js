@@ -95,5 +95,95 @@ test('creates function vectors', () => {
   expect(y2a(t8)).toEqual(r8);
 });
 
-// TODO: Test direct access through act and get.
-// TODO: Test null values.
+test('vectors within vectors', () => {
+  const f1 = (x) => x+1;
+  const f2 = (x) => $(x+2, x+3);
+  const f3 = (x) => $();
+  const f4 = (x, y) => x+y;
+  const f5 = (x) => [x, null];
+  const f6 = (x) => $(x, null);
+  const f7 = (x) => [x, [x, x]];
+  const f8 = (x, y) => [x, y];
+
+  const t1 = $($());
+  const t2 = $($(), 1, $(2, 3));
+  const t3 = $().$(f1);
+  const t4 = $(1, $(), $(2), $(3, $(4, 5), 6), $(7, 8)).$(f1, f2, f3);
+  const _t5 = $([$(1, 2), $(3, 4)]);
+  const t5 = _t5.copy().$(f8);
+  const t6 = $(_t5, [5, 6]).$(f4);
+  const t7 = $(null, 1).$(f5, f6, $(f7).$([undefined, f4]));
+
+  const b1 = t1.act();
+  expect(b1.get(0).get(0)).toEqual(null);
+
+  const b2 = t2.act();
+  expect(b2.get(0).get(0)).toEqual(null);
+  expect(b2.get(1)).toEqual(1);
+  expect(b2.get(2).get(0)).toEqual(2);
+  expect(b2.get(2).get(1)).toEqual(3);
+
+  const b3 = t3.act();
+  expect(b3.get(0)).toEqual(null);
+
+  const b4 = t4.act();
+  expect(b4.get(0).get(0)).toEqual(2);
+  expect(b4.get(0).get(1).act().get(0)).toEqual(3);
+  expect(b4.get(0).get(1).act().get(1)).toEqual(4);
+  expect(b4.get(0).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(1).get(0)).toEqual(null);
+  expect(b4.get(2).get(0)).toEqual(3);
+  expect(b4.get(2).get(1).act().get(0)).toEqual(4);
+  expect(b4.get(2).get(1).act().get(1)).toEqual(5);
+  expect(b4.get(2).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(3).get(0).get(0)).toEqual(4);
+  expect(b4.get(3).get(0).get(1).act().get(0)).toEqual(5);
+  expect(b4.get(3).get(0).get(1).act().get(1)).toEqual(6);
+  expect(b4.get(3).get(0).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(3).get(1).get(0).get(0)).toEqual(5);
+  expect(b4.get(3).get(1).get(0).get(1).act().get(0)).toEqual(6);
+  expect(b4.get(3).get(1).get(0).get(1).act().get(1)).toEqual(7);
+  expect(b4.get(3).get(1).get(0).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(3).get(1).get(1).get(0)).toEqual(6);
+  expect(b4.get(3).get(1).get(1).get(1).act().get(0)).toEqual(7);
+  expect(b4.get(3).get(1).get(1).get(1).act().get(1)).toEqual(8);
+  expect(b4.get(3).get(1).get(1).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(3).get(2).get(0)).toEqual(7);
+  expect(b4.get(3).get(2).get(1).act().get(0)).toEqual(8);
+  expect(b4.get(3).get(2).get(1).act().get(1)).toEqual(9);
+  expect(b4.get(3).get(2).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(4).get(0).get(0)).toEqual(8);
+  expect(b4.get(4).get(0).get(1).act().get(0)).toEqual(9);
+  expect(b4.get(4).get(0).get(1).act().get(1)).toEqual(10);
+  expect(b4.get(4).get(0).get(2).act().get(0)).toEqual(null);
+  expect(b4.get(4).get(1).get(0)).toEqual(9);
+  expect(b4.get(4).get(1).get(1).act().get(0)).toEqual(10);
+  expect(b4.get(4).get(1).get(1).act().get(1)).toEqual(11);
+  expect(b4.get(4).get(1).get(2).act().get(0)).toEqual(null);
+
+  const _b5 = _t5.act();
+  expect(_b5[0].get(0)).toEqual(1);
+  expect(_b5[0].get(1)).toEqual(2);
+  expect(_b5[1].get(0)).toEqual(3);
+  expect(_b5[1].get(1)).toEqual(4);
+
+  const b5 = t5.act();
+  expect(b5.get(0).get(0)).toEqual([1, 3]);
+  expect(b5.get(0).get(1)).toEqual([1, 4]);
+  expect(b5.get(1).get(0)).toEqual([2, 3]);
+  expect(b5.get(1).get(1)).toEqual([2, 4]);
+
+  const b6 = t6.act();
+  expect(b6.get(0).get(0).get(0)).toEqual(4);
+  expect(b6.get(0).get(0).get(1)).toEqual(5);
+  expect(b6.get(0).get(1).get(0)).toEqual(5);
+  expect(b6.get(0).get(1).get(1)).toEqual(6);
+  expect(b6.get(1)).toEqual(11);
+
+  const b7 = t7.act();
+  expect(b7.get(0)).toEqual(null);
+  expect(b7.get(1).get(0)).toEqual([1, null]);
+  expect(b7.get(1).get(1).act().get(0)).toEqual(1);
+  expect(b7.get(1).get(1).act().get(1)).toEqual(null);
+  expect(b7.get(1).get(2)).toEqual([1, 2]);
+});

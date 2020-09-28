@@ -1,4 +1,4 @@
-import {y2a} from './util';
+import {y2a, ay2a} from './util';
 import {
   $,
   unary,
@@ -9,6 +9,7 @@ import {
   print,
   sleep,
   push,
+  tab,
 } from '../src/index';
 
 test('accumulate values', () => {
@@ -74,11 +75,21 @@ test('identity with side effects', async () => {
   expect(dst).toEqual(rPush);
 });
 
-// TODO: Test these.
-/* test('turn', () => {
+test('match and tab', async () => {
+  // match, flat and act allow applying functions resulting from a Yuyo.
+  const f1 = () => $(0, forever)
+      .$(fill(() => (s) => s+1))
+      .$((x) => ({a, b}) => x + a + b);
 
+  const _t = $({
+    a: $(1, 2, 3),
+    b: $(10, 20, 30),
+  }).$(tab());
+  const t1 = _t.copy().$(f1().match()).finish$();
+  const t2 = _t.copy().$(f1().asyncMatch()).finish$();
+
+  const r1 = [11, 22, 33, 15, 26, 37, 19, 30, 41];
+
+  expect(y2a(t1)).toEqual(r1);
+  expect(await ay2a(t2)).toEqual(r1);
 });
-
-test('tab', () => {
-
-});*/

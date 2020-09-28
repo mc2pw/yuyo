@@ -176,12 +176,12 @@ export const tab = abstract(function(action) {
 // when needed.
 
 /**
- * @function turn
+ * @function match
  * @param {Function} action
  * @param {Iterable} it
  * @return {Function}
  */
-export const turn = abstract(function(action, it) {
+export const match = abstract(function(action, it) {
   // Provide a way for iterables to behave like arrays inside yuyos.
   // The result is affine, similar to fill.
   const iter = it[Symbol.asyncIterator] instanceof Function ?

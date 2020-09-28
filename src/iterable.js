@@ -171,14 +171,16 @@ export async function* asyncFlat(tree) {
  * @function asyncOnce0
  * @param {AsyncIterable} its
  * @param {Array} iters
- * @param {Function} cb
+ * @param {Object} state
  * @yield {*}
  */
-async function* asyncOnce0(its, iters, cb) {
+async function* asyncOnce0(its, iters, state) {
+  let d = true;
+
   for await (const it of its) {
     if (!isAsyncBranch(it)) {
       yield await it;
-      iter.push(null);
+      iters.push(null);
       continue;
     }
 
@@ -188,29 +190,45 @@ async function* asyncOnce0(its, iters, cb) {
     iters.push(iter);
 
     const {value, done} = await iter.next();
-    cb(done);
-    yield done ? null : value;
+
+    if (done) {
+      yield null;
+    } else {
+      d = false;
+      yield value;
+    }
   }
+
+  state.done = d;
 }
 
 /**
  * @generator
  * @function asyncOnce
  * @param {AsyncIterable} iters
- * @param {Function} cb
+ * @param {Object} state
  * @yield {*}
  */
-async function* asyncOnce(iters, cb) {
-  for await (const iter of iters) {
+async function* asyncOnce(iters, state) {
+  let d = true;
+
+  for (const iter of iters) {
     if (iter === null) {
       yield null;
       continue;
     }
 
     const {value, done} = await iter.next();
-    cb(done);
-    yield done ? null : value;
+
+    if (done) {
+      yield null;
+    } else {
+      d = false;
+      yield value;
+    }
   }
+
+  state.done = d;
 }
 
 /**
@@ -222,16 +240,21 @@ export function mix(tree) {
 
   const next = () => {
     const v = [];
-    let d = false;
+    let d = true;
 
     for (const iter of iters) {
       const {value, done} = iter.next();
-      v.push(value);
-      d = d && done;
+
+      if (done) {
+        v.push(null);
+      } else {
+        v.push(value);
+        d = false;
+      }
     }
 
     return {
-      value: $(...v),
+      value: v,
       done: d,
     };
   };
@@ -248,40 +271,94 @@ export function mix(tree) {
 }
 
 /**
- * @param {Iterable} tree
+ * @param {AsyncIterable} tree
  * @return {Iterable}
  */
 export function asyncMix(tree) {
-  let next;
-  let done;
+  const state = {done: false};
   const iters = [];
 
-  const cb = (d) => {
-    done = done && d;
-  };
-
-  const n0 = () => {
-    next = n;
+  let next = () => {
+    next = _next;
 
     return {
-      value: $(asyncOnce0(tree, iters, cb)),
-      done,
+      value: asyncOnce0(tree, iters, state),
+      done: state.done,
     };
   };
 
-  const n = () => {
+  const _next = () => {
     return {
-      value: $(asyncOnce(iters, cb)),
-      done,
+      value: asyncOnce(iters, state),
+      done: state.done,
     };
   };
 
-  next = n0;
   return {
     [Symbol.iterator]() {
-      return {next};
+      return {
+        next() {
+          return next();
+        },
+      };
     },
   };
+}
+
+/**
+ * @generator
+ * @function traverseLL
+ * @param {Object} last
+ * @yield {*}
+ */
+function* traverseLL(last) {
+  let node = last;
+
+  while (node) {
+    yield node;
+    node = node.prev;
+  }
+}
+
+/**
+ * @param {Object} last
+ * @param {Object} node
+ * @return {Object|null}
+ */
+function removeFromDLL(last, node) {
+  let l;
+
+  if (node.prev) {
+    if (node.next) {
+      node.prev.next = node.next;
+      node.next.prev = node.prev;
+      l = last;
+    } else {
+      delete node.prev.next;
+      l = node.prev;
+    }
+  } else if (node.next) {
+    delete node.next.prev;
+    l = last;
+  } else {
+    l = null;
+  }
+
+  return l;
+}
+
+/**
+ * @param {Object} last
+ * @param {Object} node
+ * @return {Object}
+ */
+function pushIntoDLL(last, node) {
+  if (last) {
+    last.next = node;
+    node.prev = last;
+  }
+
+  return node;
 }
 
 /**
@@ -289,40 +366,43 @@ export function asyncMix(tree) {
  * @return {Iterable}
  */
 export function merge(tree) {
-  const sources = [];
+  let srcNode; // linked list
 
   for (const it of tree) {
     const iter = getAsyncIterator(it);
-    sources.push({
+    srcNode = pushIntoDLL(srcNode, {
       advance(done) {
-        this.promise = done ? null : (async (source) => {
-          return {
-            result: await iter.next(),
-            source,
-          };
-        })(this);
+        if (done) {
+          srcNode = removeFromDLL(srcNode, this);
+        } else {
+          this.promise = (async (source) => {
+            return {
+              result: await iter.next(),
+              source,
+            };
+          })(this);
+        }
       },
     });
   }
 
-  for (const s of sources) {
+  for (const s of traverseLL(srcNode)) {
     s.advance(false);
   }
 
-  const next = async function() {
-    const promises = [];
-
-    for (const {promise} of sources) {
-      if (promise !== null) {
-        promises.push(promise);
-      }
+  const promises = function* () {
+    for (const s of traverseLL(srcNode)) {
+      yield s.promise;
     }
+  };
 
-    if (promises.length) {
+  const next = async function() {
+    if (!srcNode) {
       return {done: true};
     }
 
-    const {result, source} = await Promise.race(promises);
+    const {result, source} = await Promise.race(promises());
+
     source.advance(result.done);
 
     return {

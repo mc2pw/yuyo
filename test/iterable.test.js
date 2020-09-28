@@ -2,6 +2,7 @@ import {i2a, ai2a} from './util';
 import {
   $,
   unary,
+  sleep,
 } from '../src/index';
 
 test('manipulation iterations', async () => {
@@ -121,4 +122,184 @@ test('manipulation iterations', async () => {
   expect(await t8.asyncLast()).toEqual(rLast8);
 });
 
-// TODO: Test mix and merge.
+test('mix', async () => {
+  let iter;
+  let aiter;
+
+  const t1 = $();
+  const t2 = $($(1, 2), 3, $(4, 5));
+  const t3 = $($(1, 2), $(), 3);
+  const t4 = $($());
+  const t5 = $($(1, 2, 3));
+
+  const next = (d, v) => {
+    const {value, done} = iter.next();
+    expect(done).toEqual(d);
+    if (!d) expect(i2a(value.flat())).toEqual(v);
+  };
+
+  const anext = async (d, v) => {
+    const {value, done} = await aiter.next();
+    expect(done).toEqual(d);
+    if (!d) expect(await ai2a(value.asyncFlat())).toEqual(v);
+  };
+
+  iter = t1.mix();
+  aiter = t1.asyncMix();
+  next(true);
+  await anext(false, []);
+  await anext(true);
+
+  iter = t2.mix();
+  aiter = t2.asyncMix();
+  next(false, [1, 3, 4]);
+  next(false, [2, null, 5]);
+  next(true);
+  await anext(false, [1, 3, 4]);
+  await anext(false, [2, null, 5]);
+  await anext(false, [null, null, null]);
+  await anext(true);
+
+  iter = t3.mix();
+  aiter = t3.asyncMix();
+  next(false, [1, null, 3]);
+  next(false, [2, null, null]);
+  next(true);
+  await anext(false, [1, null, 3]);
+  await anext(false, [2, null, null]);
+  await anext(false, [null, null, null]);
+  await anext(true);
+
+  iter = t4.mix();
+  aiter = t4.asyncMix();
+  next(true);
+  await anext(false, [null]);
+  await anext(true);
+
+  iter = t5.mix();
+  aiter = t5.asyncMix();
+  next(false, [1]);
+  next(false, [2]);
+  next(false, [3]);
+  next(true);
+  await anext(false, [1]);
+  await anext(false, [2]);
+  await anext(false, [3]);
+  await anext(false, [null]);
+  await anext(true);
+});
+
+jest.useFakeTimers();
+
+test('merge', async () => {
+  const t1 = $(
+      $(1).$(sleep(5000)),
+      $(2).$(sleep(4000)),
+      $(3).$(sleep(3000)),
+  );
+  const t2 = $(
+      $(4).$(sleep(2000)),
+      $(5).$(sleep(1000)),
+  );
+  const t3 = $(6, 7, 8, 9, 10).$(sleep(300));
+  const t4 = $(t1.merge$(), t2.merge(), t3);
+  const t5 = $($(), t2.merge$(), 0, t3.merge$());
+  const t6 = $();
+  const t7 = $(1, 2, $(3, 4), $(), $(5));
+  const t8 = $($(1, 2).$(sleep(300)));
+
+  let iter;
+
+  const next = async (td, d, v) => {
+    const p = iter.next();
+    jest.advanceTimersByTime(td);
+    const {value, done} = await p;
+    expect(done).toEqual(d);
+    if (!d) expect(value).toEqual(v);
+  };
+
+  iter = t1.merge();
+  await next(3000, false, 3);
+  await next(0, false, null);
+  await next(1000, false, 2);
+  await next(0, false, null);
+  await next(1000, false, 1);
+  await next(0, false, null);
+  await next(0, true);
+
+  iter = t2.merge();
+  await next(1000, false, 5);
+  await next(0, false, null);
+  await next(1000, false, 4);
+  await next(0, false, null);
+  await next(0, true);
+
+  const l3 = ai2a(t3.merge());
+  jest.advanceTimersByTime(300);
+  expect((await l3).sort()).toEqual([
+    10, 6, 7, 8, 9,
+    null, null, null, null, null,
+  ]);
+
+  iter = t4.merge();
+  await next(300, false, 6);
+  await next(300, false, 7);
+  await next(300, false, 8);
+  await next(100, false, 5);
+  await next(0, false, null);
+  await next(200, false, 9);
+  await next(300, false, 10);
+  await next(0, false, null);
+  await next(500, false, 4);
+  await next(0, false, null);
+  await next(0, false, null);
+  await next(1000, false, 3);
+  await next(0, false, null);
+  await next(1000, false, 2);
+  await next(0, false, null);
+  await next(1000, false, 1);
+  await next(0, false, null);
+  await next(0, false, null);
+  await next(0, true);
+
+  iter = t5.merge();
+  expect([
+    (await iter.next()).value,
+    (await iter.next()).value,
+    (await iter.next()).value,
+  ].sort()).toEqual([0, null, null]);
+  jest.advanceTimersByTime(300);
+  expect([
+    (await iter.next()).value, (await iter.next()).value,
+    (await iter.next()).value, (await iter.next()).value,
+    (await iter.next()).value, (await iter.next()).value,
+    (await iter.next()).value, (await iter.next()).value,
+    (await iter.next()).value, (await iter.next()).value,
+    (await iter.next()).value,
+    ].sort()).toEqual([
+      10, 6, 7, 8, 9,
+      null, null, null, null, null,
+      null
+    ]);
+  await next(700, false, 5);
+  await next(0, false, null);
+  await next(1000, false, 4);
+  await next(0, false, null);
+  await next(0, false, null);
+  await next(0, true);
+
+  iter = t6.merge();
+  await next(0, true);
+
+  const l7 = ai2a(t7.merge());
+  expect((await l7).sort()).toEqual([
+    1, 2, 3, 4, 5,
+    null, null, null, null, null,
+  ]);
+
+  iter = t8.merge();
+  await next(300, false, 1);
+  await next(300, false, 2);
+  await next(0, false, null);
+  await next(0, true);
+});
