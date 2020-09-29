@@ -12,10 +12,14 @@ test('creates simple vector', () => {
   const t5 = $();
   const t6 = $(1);
   const t7 = $($($(1)));
+  const t8 = $('foo');
+  const t9 = $(0, 'foo');
 
   const r1 = [1, 2, 3, 4, 5];
   const r2 = [];
   const r3 = [1];
+  const r4 = ['foo'];
+  const r5 = [0, 'foo'];
 
   expect(y2a(t1)).toEqual(r1);
   expect(y2a(t2)).toEqual(r1);
@@ -24,6 +28,8 @@ test('creates simple vector', () => {
   expect(y2a(t5)).toEqual(r2);
   expect(y2a(t6)).toEqual(r3);
   expect(y2a(t7)).toEqual(r3);
+  expect(y2a(t8)).toEqual(r4);
+  expect(y2a(t9)).toEqual(r5);
 });
 
 test('creates vector with tensors', () => {

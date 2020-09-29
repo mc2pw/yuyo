@@ -9,7 +9,7 @@ const tensor = {
   apply(f, v) {
     let w;
 
-    if (v instanceof Array && !(v[sym.act] instanceof Function)) {
+    if (Array.isArray(v) && !v[sym.act]) {
       if (f instanceof Tensor) {
         w = this.applyTensor(f, v);
       } else {
@@ -24,7 +24,7 @@ const tensor = {
   prepare(v) {
     let w;
 
-    if (v instanceof Array && !(v[sym.act] instanceof Function)) {
+    if (Array.isArray(v) && !v[sym.act]) {
       if (v instanceof Tensor) {
         w = v;
       } else {
@@ -33,7 +33,7 @@ const tensor = {
     } else {
       w = this.prepareUnary(v);
 
-      if (w instanceof Function && !(v instanceof Function)) {
+      if (typeof w === 'function' && !(typeof v === 'function')) {
         w[sym.unary] = true;
       }
     }
@@ -45,7 +45,7 @@ const tensor = {
 
     if (f instanceof Tensor) {
       // Yuyo x gets handled by applyFuncToSimple.
-      const m = (x) => x instanceof Array ?
+      const m = (x) => Array.isArray(x) ?
         this.applyTensor(f, x) :
         f.map((t) => this.apply(t, x));
       m[sym.unary] = true;
@@ -69,7 +69,7 @@ const tensor = {
   applyFunc(f, v) {
     let w;
 
-    if (v instanceof Array && !(v[sym.act] instanceof Function)) {
+    if (Array.isArray(v) && !v[sym.act]) {
       w = f[sym.unary] ? f(v) : f(...v);
     } else {
       w = this.applyFuncToSimple(f, v);
@@ -84,7 +84,7 @@ const tensor = {
       w = null;
     } else if (v === undefined) {
       w = f(v);
-    } else if (v[sym.pre] instanceof Function) {
+    } else if (v[sym.pre]) {
       w = v[sym.pre](f);
     } else {
       w = core.applyFunc(this._applyFunc.bind(this), f, v);
@@ -99,7 +99,7 @@ const tensor = {
   _applyFunc(f, v) {
     let w;
 
-    if (v instanceof Array && !(v[sym.act] instanceof Function)) {
+    if (Array.isArray(v) && !v[sym.act]) {
       w = this.applyFuncToTensor(f, v);
     } else {
       w = this.applyFunc(f, v);

@@ -10,19 +10,19 @@ const _formal = {
     // Recognizing sym.prepare does not make sense here.
     if (f == null) {
       w = f;
-    } else if (f[sym.act] instanceof Function) {
+    } else if (f[sym.act]) {
       w = f[sym.act]();
     } else {
       w = f;
     }
 
-    if (w instanceof Array) {
+    if (Array.isArray(w)) {
       return (x) => this.append(w, x);
     }
 
     const u = core.prepareCollection(this.action.bind(this), w);
 
-    if (u instanceof Function && !(w instanceof Function)) {
+    if (typeof u === 'function' && !(typeof w === 'function')) {
       return u;
     } else {
       return (x) => this.append(u, x);
@@ -32,7 +32,7 @@ const _formal = {
     let w;
 
     // The elemental values are null and arrays.
-    if (v instanceof Array) {
+    if (Array.isArray(v)) {
       w = f(v);
     } else if (v === null) {
       w = null;

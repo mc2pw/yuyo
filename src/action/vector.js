@@ -8,12 +8,10 @@ const vector = {
   prepare(f) {
     let w;
 
-    if (f == null) {
+    if (f == null || f[sym.act]) {
       w = f;
-    } else if (f[sym.prepare] instanceof Function) {
+    } else if (f[sym.prepare]) {
       w = f[sym.prepare](this.action.bind(this));
-    } else if (f[sym.act] instanceof Function) {
-      w = f;
     } else {
       w = core.prepareCollection(this.action.bind(this), f);
     }
@@ -34,9 +32,9 @@ const vector = {
       w = v;
     } else if (f === null) {
       w = f;
-    } else if (f[sym.act] instanceof Function) {
+    } else if (f[sym.act]) {
       w = f[sym.act](v);
-    } else if (f instanceof Function) {
+    } else if (typeof f === 'function') {
       w = this.applyFunc(f, v);
     } else {
       w = f;

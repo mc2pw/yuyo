@@ -109,13 +109,14 @@ function applyToVector(action, f, v) {
  * @return {Function}
  */
 function applyToFunction(action, f, v) {
-  const mapped = (t) => t instanceof Function ?
+  const mapped = (t) => typeof t === 'function' ?
     (...i) => mapped(t(...i)) :
     action(f, t);
   return mapped(v);
 }
 
 /**
+ * @ignore
  * @param {Function} action
  * @param {*} v
  * @return {*}
@@ -128,9 +129,9 @@ export function prepareCollection(action, v) {
     w = prepareVector(action, v);
   } else if (v instanceof Promise) {
     w = preparePromise(action, v);
-  } else if (v[Symbol.iterator] instanceof Function) {
+  } else if (v[Symbol.iterator] && !(typeof v === 'string')) {
     w = prepareIterable(action, v);
-  } else if (v[Symbol.asyncIterator] instanceof Function) {
+  } else if (v[Symbol.asyncIterator]) {
     w = prepareAsyncIterable(action, v);
   } else {
     w = v;
@@ -140,6 +141,7 @@ export function prepareCollection(action, v) {
 }
 
 /**
+ * @ignore
  * @param {Function} action
  * @param {Function} f
  * @param {*} v
@@ -151,15 +153,15 @@ export function applyFunc(action, f, v) {
   // iterating?
   let w;
 
-  if (v instanceof Function) {
+  if (typeof v === 'function') {
     w = applyToFunction(action, f, v);
   } else if (v instanceof Vector) {
     w = applyToVector(action, f, v);
   } else if (v instanceof Promise) {
     w = applyToPromise(action, f, v);
-  } else if (v[Symbol.iterator] instanceof Function) {
+  } else if (v[Symbol.iterator] && !(typeof v === 'string')) {
     w = applyToIterable(action, f, v);
-  } else if (v[Symbol.asyncIterator] instanceof Function) {
+  } else if (v[Symbol.asyncIterator]) {
     w = applyToAsyncIterable(action, f, v);
   } else {
     w = f(v);
@@ -169,6 +171,7 @@ export function applyFunc(action, f, v) {
 }
 
 /**
+ * @ignore
  * @param {Function} action
  * @param {*} start
  * @param {Iterable} steps
@@ -192,6 +195,7 @@ export function fold(action, start, steps) {
  * Same as fold but treats the empty entries of an Array as if thery were
  * undefined.
  *
+ * @ignore
  * @param {Function} action
  * @param {*} start
  * @param {*} steps

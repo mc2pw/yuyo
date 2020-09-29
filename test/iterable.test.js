@@ -6,7 +6,7 @@ import {
 } from '../src/index';
 
 test('manipulation iterations', async () => {
-  const isArray = unary((x) => x instanceof Array ? x : null);
+  const isArray = unary((x) => Array.isArray(x) ? x : null);
 
   const t1 = $();
   const t2 = $(1);
@@ -276,11 +276,11 @@ test('merge', async () => {
     (await iter.next()).value, (await iter.next()).value,
     (await iter.next()).value, (await iter.next()).value,
     (await iter.next()).value,
-    ].sort()).toEqual([
-      10, 6, 7, 8, 9,
-      null, null, null, null, null,
-      null
-    ]);
+  ].sort()).toEqual([
+    10, 6, 7, 8, 9,
+    null, null, null, null, null,
+    null,
+  ]);
   await next(700, false, 5);
   await next(0, false, null);
   await next(1000, false, 4);

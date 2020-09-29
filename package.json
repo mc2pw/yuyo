@@ -1,13 +1,16 @@
 {
   "name": "yuyo",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A minimalistic functional framework.",
   "main": "dist/yuyo.node.js",
   "module": "src/index.js",
+  "unpkg": "dist/yuyo.js",
+  "jsdelivr": "dist/yuyo.js",
   "scripts": {
     "build": "webpack",
-    "test": "jest",
-    "lint": "eslint src test"
+    "doc": "esdoc",
+    "lint": "eslint src test",
+    "test": "jest"
   },
   "keywords": [
     "functional",
@@ -19,8 +22,9 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yuyojs/yuyo.git"
+    "url": "git+https://github.com/yuyojs/yuyo.git"
   },
+  "homepage": "https://github.com/yuyojs/yuyo#readme",
   "browserslist": "defaults",
   "devDependencies": {
     "@babel/cli": "^7.8.4",
@@ -28,6 +32,11 @@
     "@babel/preset-env": "^7.9.6",
     "babel-jest": "^26.0.1",
     "babel-loader": "^8.1.0",
+    "esdoc": "^1.1.0",
+    "esdoc-ecmascript-proposal-plugin": "^1.0.0",
+    "esdoc-importpath-plugin": "^1.0.2",
+    "esdoc-publish-markdown-plugin": "^1.1.0",
+    "esdoc-standard-plugin": "^1.0.0",
     "eslint": "^7.9.0",
     "eslint-config-google": "^0.14.0",
     "jest": "^26.0.1",

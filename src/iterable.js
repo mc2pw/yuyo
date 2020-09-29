@@ -1,6 +1,7 @@
 import * as sym from './symbol';
 
 /**
+ * @ignore
  * @param {Iterable} it
  * @return {*}
  */
@@ -11,6 +12,7 @@ export function last(it) {
 }
 
 /**
+ * @ignore
  * @param {AsyncIterable} it
  * @return {*}
  */
@@ -21,6 +23,7 @@ export async function asyncLast(it) {
 }
 
 /**
+ * @ignore
  * @generator
  * @function finish
  * @param {Iterable} it
@@ -37,6 +40,7 @@ export function* finish(it) {
 }
 
 /**
+ * @ignore
  * @generator
  * @function asyncFinish
  * @param {AsyncIterable} it
@@ -52,6 +56,7 @@ export async function* asyncFinish(it) {
 }
 
 /**
+ * @ignore
  * @generator
  * @function filter
  * @param {Iterable} it
@@ -64,6 +69,7 @@ export function* filter(it) {
 }
 
 /**
+ * @ignore
  * @generator
  * @function filter
  * @param {Iterable} it
@@ -80,10 +86,13 @@ export async function* asyncFilter(it) {
  * @return {boolean}
  */
 function _isBranch(tree) {
-  return tree[Symbol.iterator] instanceof Function && !(tree instanceof Array);
+  return tree[Symbol.iterator] &&
+    !Array.isArray(tree) &&
+    !(typeof tree === 'string');
 }
 
 /**
+ * @ignore
  * @param {*} tree
  * @return {boolean}
  */
@@ -92,12 +101,13 @@ export function isBranch(tree) {
 }
 
 /**
+ * @ignore
  * @param {*} tree
  * @return {boolean}
  */
 export function isAsyncBranch(tree) {
   return tree != null && (
-    tree[Symbol.asyncIterator] instanceof Function ||
+    tree[Symbol.asyncIterator] ||
     _isBranch(tree)
   );
 }
@@ -118,7 +128,7 @@ function getIterator(it) {
  */
 function getAsyncIterator(it) {
   if (it != null) {
-    if (it[Symbol.asyncIterator] instanceof Function) {
+    if (it[Symbol.asyncIterator]) {
       return it[Symbol.asyncIterator]();
     } else if (_isBranch(it)) {
       return it[Symbol.iterator]();
@@ -131,6 +141,7 @@ function getAsyncIterator(it) {
 }
 
 /**
+ * @ignore
  * @generator
  * @function flat
  * @param {Iterable} tree
@@ -140,13 +151,14 @@ export function* flat(tree) {
   for (const t of tree) {
     if (isBranch(t)) {
       yield* flat(t);
-    } else if (t != null && t[sym.flat] instanceof Function) {
+    } else if (t != null && t[sym.flat]) {
       yield* t[sym.flat]();
     } else yield t;
   }
 }
 
 /**
+ * @ignore
  * @generator
  * @function asyncFlat
  * @param {Iterable} tree
@@ -158,7 +170,7 @@ export async function* asyncFlat(tree) {
       for await (const v of asyncFlat(t)) {
         yield v;
       }
-    } else if (t != null && t[sym.asyncFlat] instanceof Function) {
+    } else if (t != null && t[sym.asyncFlat]) {
       for await (const v of t[sym.asyncFlat]()) {
         yield v;
       }
@@ -184,7 +196,7 @@ async function* asyncOnce0(its, iters, state) {
       continue;
     }
 
-    const iter = it[Symbol.asyncIterator] instanceof Function ?
+    const iter = it[Symbol.asyncIterator] ?
       it[Symbol.asyncIterator]() :
       it[Symbol.iterator]();
     iters.push(iter);
@@ -232,6 +244,7 @@ async function* asyncOnce(iters, state) {
 }
 
 /**
+ * @ignore
  * @param {Iterable} tree
  * @return {Iterable}
  */
@@ -271,6 +284,7 @@ export function mix(tree) {
 }
 
 /**
+ * @ignore
  * @param {AsyncIterable} tree
  * @return {Iterable}
  */
@@ -362,6 +376,7 @@ function pushIntoDLL(last, node) {
 }
 
 /**
+ * @ignore
  * @param {Iterable} tree
  * @return {Iterable}
  */

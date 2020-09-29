@@ -1,4 +1,7 @@
-/** An array with a function applied each time an itm is accessed.*/
+/** An array with a function applied each time an itm is accessed.
+ *
+ * @ignore
+ */
 export class Vector {
   /**
    * @param {Array} terms
@@ -40,7 +43,10 @@ export class Vector {
   }
 }
 
-/** An array. */
+/** An array.
+ *
+ * @ignore
+ */
 export class Tensor extends Array {
   /**
    * @param {Iterable} arr

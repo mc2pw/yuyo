@@ -20,7 +20,7 @@ export class Yuyo extends Array {
     const theory = Yuyo.theory;
 
     this.push(
-      terms.length === 1 && !(terms[0] instanceof Yuyo) ?
+      terms.length === 1 && !(terms[0] != null && terms[0][sym.act]) ?
       theory.prepare(terms[0]) :
       unary((x) => new Vector(terms, (t) => theory.action(t, x))),
     );

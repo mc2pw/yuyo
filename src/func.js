@@ -184,7 +184,7 @@ export const tab = abstract(function(action) {
 export const match = abstract(function(action, it) {
   // Provide a way for iterables to behave like arrays inside yuyos.
   // The result is affine, similar to fill.
-  const iter = it[Symbol.asyncIterator] instanceof Function ?
+  const iter = it[Symbol.asyncIterator] ?
     it[Symbol.asyncIterator]() :
     it[Symbol.iterator]();
 
